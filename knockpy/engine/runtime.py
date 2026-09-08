@@ -28,7 +28,7 @@ import time
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -1613,7 +1613,7 @@ class AsyncScanner:
     def _iso_from_epoch(value: Any) -> Optional[str]:
         try:
             ts = int(value)
-            return datetime.utcfromtimestamp(ts).isoformat() + "Z"
+            return datetime.fromtimestamp(ts, timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         except Exception:
             return None
 
@@ -1772,7 +1772,7 @@ class AsyncScanner:
             if lifetime_days > 398:
                 anomalies.append(f"Certificate validity unusually long: {lifetime_days} days")
             try:
-                if datetime.utcfromtimestamp(valid_to) < datetime.utcnow():
+                if datetime.fromtimestamp(valid_to, timezone.utc) < datetime.now(timezone.utc):
                     anomalies.append("Certificate appears expired")
             except Exception:
                 pass
@@ -2337,9 +2337,9 @@ class AsyncScanner:
                             not_after = cert.get("notAfter")
                             if not_after:
                                 expiry_ts = ssl.cert_time_to_seconds(not_after)
-                                expiry_date = datetime.utcfromtimestamp(expiry_ts).date()
+                                expiry_date = datetime.fromtimestamp(expiry_ts, timezone.utc).date()
                                 expiry_iso = expiry_date.isoformat()
-                                cert_ok = expiry_date >= datetime.utcnow().date()
+                                cert_ok = expiry_date >= datetime.now(timezone.utc).date()
 
                             subject = cert.get("subject", ())
                             for rdns in subject:
